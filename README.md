@@ -20,7 +20,7 @@ Recent supply chain attacks (like the "Shai-Hulud" worm in late 2025) utilize `p
 To secure your environment, clone this repo and run the setup script.
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/npm-supply-chain-defense.git ~/npm-supply-chain-defense
+git clone https://github.com/quito96/dev-security-config.git ~/npm-supply-chain-defense
 cd ~/npm-supply-chain-defense
 chmod +x setup.sh
 ./setup.sh
