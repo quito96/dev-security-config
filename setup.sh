@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Security Configuration Setup Script
-# Installs .npmrc and .cursorrules safely without overwriting existing configurations.
+# Security Configuration Injection Script
+# Injects .npmrc, .cursorrules, and Security-Advisory into the parent project.
 
 set -e
 
@@ -10,90 +10,106 @@ YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m' # No Color
 
-echo -e "${GREEN}Starting Security Configuration Setup...${NC}"
+echo -e "${GREEN}Starting Security Configuration Injection...${NC}"
 
-# Detect OS
-OS="$(uname -s)"
-case "${OS}" in
-    Linux*)     MACHINE=Linux;;
-    Darwin*)    MACHINE=Mac;;
-    *)          MACHINE="UNKNOWN:${OS}"
-esac
-
-echo -e "Detected OS: ${YELLOW}${MACHINE}${NC}"
-
+# Determine directories
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+TARGET_DIR="$(dirname "$SCRIPT_DIR")" # Parent directory
+
+echo -e "Source: ${YELLOW}${SCRIPT_DIR}${NC}"
+echo -e "Target Project: ${YELLOW}${TARGET_DIR}${NC}"
+
+# Files to copy
 NPMRC_SOURCE="${SCRIPT_DIR}/.npmrc"
 CURSORRULES_SOURCE="${SCRIPT_DIR}/.cursorrules"
+ADVISORY_SOURCE="${SCRIPT_DIR}/Security-Advisory"
 
-# Function to install globally
-install_global() {
-    echo -e "\n${YELLOW}--- Global Installation (~/.npmrc) ---${NC}"
-    TARGET_NPMRC="${HOME}/.npmrc"
+REPORT_FILE="${TARGET_DIR}/SECURITY_SETUP_REPORT.md"
 
-    if [ -f "$TARGET_NPMRC" ]; then
-        echo -e "${RED}Warning: ${TARGET_NPMRC} already exists.${NC}"
-        read -p "Do you want to back it up and overwrite? (y/N) " -n 1 -r
+# Tracking for report
+INSTALLED_FILES=()
+
+# Function to copy file safely
+copy_file() {
+    local src=$1
+    local dest_name=$2
+    local dest_path="${TARGET_DIR}/${dest_name}"
+
+    if [ -f "$dest_path" ]; then
+        echo -e "${RED}Warning: ${dest_name} already exists in project.${NC}"
+        read -p "Overwrite? (y/N) " -n 1 -r
         echo
         if [[ $REPLY =~ ^[Yy]$ ]]; then
-            mv "$TARGET_NPMRC" "${TARGET_NPMRC}.bak_$(date +%s)"
-            echo -e "Backed up existing .npmrc."
+            cp "$src" "$dest_path"
+            echo -e "Overwrote ${dest_name}."
+            INSTALLED_FILES+=("${dest_name} (Overwritten)")
         else
-            echo -e "Skipping global .npmrc installation."
-            return
+            echo -e "Skipped ${dest_name}."
+            INSTALLED_FILES+=("${dest_name} (Skipped)")
         fi
-    fi
-
-    ln -sf "$NPMRC_SOURCE" "$TARGET_NPMRC"
-    echo -e "${GREEN}Success: Linked .npmrc to ${TARGET_NPMRC}${NC}"
-    echo -e "Verifying configuration..."
-    npm config list | grep "ignore-scripts"
-}
-
-# Function to install locally (copy to current dir)
-install_local() {
-    echo -e "\n${YELLOW}--- Local Installation (Current Directory) ---${NC}"
-    TARGET_DIR="$(pwd)"
-    
-    # Check .npmrc
-    if [ -f "${TARGET_DIR}/.npmrc" ]; then
-        echo -e "${RED}Skipping .npmrc: File already exists in ${TARGET_DIR}${NC}"
     else
-        cp "$NPMRC_SOURCE" "${TARGET_DIR}/.npmrc"
-        echo -e "${GREEN}Copied .npmrc to ${TARGET_DIR}${NC}"
-    fi
-
-    # Check .cursorrules
-    if [ -f "${TARGET_DIR}/.cursorrules" ]; then
-        echo -e "${RED}Skipping .cursorrules: File already exists in ${TARGET_DIR}${NC}"
-    else
-        cp "$CURSORRULES_SOURCE" "${TARGET_DIR}/.cursorrules"
-        echo -e "${GREEN}Copied .cursorrules to ${TARGET_DIR}${NC}"
+        cp "$src" "$dest_path"
+        echo -e "${GREEN}Injected ${dest_name}.${NC}"
+        INSTALLED_FILES+=("${dest_name}")
     fi
 }
 
-echo -e "\nSelect installation mode:"
-echo "1) Global (Symlink .npmrc to user home)"
-echo "2) Local (Copy .npmrc and .cursorrules to current directory)"
-echo "3) Exit"
+# 1. Inject Configuration Files
+echo -e "\n${YELLOW}--- Injecting Configuration ---${NC}"
+copy_file "$NPMRC_SOURCE" ".npmrc"
+copy_file "$CURSORRULES_SOURCE" ".cursorrules"
 
-read -p "Enter choice [1-3]: " choice
+# 2. Inject Security Advisory
+echo -e "\n${YELLOW}--- Injecting Advisory ---${NC}"
+DEST_ADVISORY="${TARGET_DIR}/Security-Advisory"
+if [ -d "$DEST_ADVISORY" ]; then
+    echo -e "${RED}Warning: Security-Advisory folder already exists.${NC}"
+    read -p "Overwrite contents? (y/N) " -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        cp -R "$ADVISORY_SOURCE/"* "$DEST_ADVISORY/"
+        echo -e "Updated Security-Advisory."
+        INSTALLED_FILES+=("Security-Advisory/ (Updated)")
+    else
+        echo -e "Skipped Security-Advisory."
+        INSTALLED_FILES+=("Security-Advisory/ (Skipped)")
+    fi
+else
+    cp -R "$ADVISORY_SOURCE" "$TARGET_DIR/"
+    echo -e "${GREEN}Injected Security-Advisory folder.${NC}"
+    INSTALLED_FILES+=("Security-Advisory/")
+fi
 
-case $choice in
-    1)
-        install_global
-        ;;
-    2)
-        install_local
-        ;;
-    3)
-        echo "Exiting."
-        exit 0
-        ;;
-    *)
-        echo "Invalid choice."
-        exit 1
-        ;;
-esac
+# 3. Generate Report
+echo -e "\n${YELLOW}--- Generating Report ---${NC}"
+{
+    echo "# Security Setup Report"
+    echo ""
+    echo "**Date:** $(date)"
+    echo "**Source Repo:** [https://github.com/quito96/dev-security-config.git](https://github.com/quito96/dev-security-config.git)"
+    echo ""
+    echo "## Actions Taken"
+    for item in "${INSTALLED_FILES[@]}"; do
+        echo "- $item"
+    done
+    echo ""
+    echo "## Next Steps"
+    echo "1. Review the injected \`.npmrc\` and \`.cursorrules\`."
+    echo "2. Read \`Security-Advisory/NPM-SupplyChainSecurity.md\`."
+    echo "3. Commit these changes to your project."
+} > "$REPORT_FILE"
+echo -e "${GREEN}Report created at ${REPORT_FILE}${NC}"
 
-echo -e "\n${GREEN}Setup complete!${NC}"
+# 4. Cleanup
+echo -e "\n${YELLOW}--- Cleanup ---${NC}"
+read -p "Do you want to delete the 'dev-security-config' installer directory? (y/N) " -n 1 -r
+echo
+if [[ $REPLY =~ ^[Yy]$ ]]; then
+    echo -e "Deleting ${SCRIPT_DIR}..."
+    rm -rf "$SCRIPT_DIR"
+    echo -e "${GREEN}Cleanup complete.${NC}"
+else
+    echo -e "Installer directory kept."
+fi
+
+echo -e "\n${GREEN}Security injection finished!${NC}"

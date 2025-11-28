@@ -13,43 +13,48 @@ Recent supply chain attacks (like the "Shai-Hulud" worm in late 2025) utilize `p
 
 *   **`.npmrc`**: A hardened configuration file that disables scripts (`ignore-scripts=true`) and enforces strict versioning.
 *   **`.cursorrules`**: Security instructions for AI Coding Assistants (Cursor, Windsurf, Copilot) to prevent them from accidentally suggesting insecure commands.
-*   **`setup.sh`**: A safe setup script to apply these settings to your local machine or project.
+*   **`setup.sh`**: A script that injects these configurations into your project.
 
-## 🚀 Quick Start
+## 🚀 Quick Start (Project Injection)
 
-To secure your environment, clone this repo and run the setup script.
+This workflow is designed to "inject" security configurations into an existing project and then remove the installer.
 
-```bash
-git clone https://github.com/quito96/dev-security-config.git ~/npm-supply-chain-defense
-cd ~/npm-supply-chain-defense
-chmod +x setup.sh
-./setup.sh
-```
+1.  **Navigate to your project root**:
+    ```bash
+    cd ~/my-projects/my-node-app
+    ```
 
-### Installation Options
+2.  **Clone this repository**:
+    ```bash
+    git clone https://github.com/quito96/dev-security-config.git
+    ```
 
-The script offers two modes:
+3.  **Run the injection script**:
+    ```bash
+    cd dev-security-config
+    chmod +x setup.sh
+    ./setup.sh
+    ```
 
-1.  **Global Install**: Symlinks the secure `.npmrc` to your user home directory (`~/.npmrc`). This protects ALL your projects by default.
-2.  **Local Install**: Copies `.npmrc` and `.cursorrules` to your current directory. Useful for securing specific projects.
-
-**Safety Note:** The script checks for existing files and will NOT overwrite them without asking or skipping entirely. It does not modify your `.git` configuration.
+4.  **Follow the prompts**:
+    *   The script will copy `.npmrc`, `.cursorrules`, and the `Security-Advisory` folder to your project root (`..`).
+    *   It will generate a `SECURITY_SETUP_REPORT.md` in your project.
+    *   **Cleanup**: It will ask if you want to delete the `dev-security-config` folder. Say **Yes** (y) to keep your project clean.
 
 ## ✅ Verification
 
-After running the script (Global mode), check your active configuration:
+After running the script, your project should contain:
+*   `.npmrc` (with `ignore-scripts=true`)
+*   `.cursorrules`
+*   `Security-Advisory/` folder
+*   `SECURITY_SETUP_REPORT.md`
 
-```bash
-npm config list
-```
-
-You should see `ignore-scripts = true`.
+Check the report for a summary of changes.
 
 ## 🤖 AI Assistant Configuration (Cursor / Windsurf)
 
 AI assistants often hallucinate commands like `npm install` without safety flags. This repo includes a `.cursorrules` file.
 
-If you choose **Local Install**, this file is copied to your project root.
 Your AI assistant will now adhere to the following protocols:
 *   Never run `npm install` without flags.
 *   Always prefer `npm ci` in CI/CD pipelines.
