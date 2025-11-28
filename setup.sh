@@ -1,9 +1,10 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Security Configuration Injection Script
 # Injects .npmrc, .cursorrules, and Security-Advisory into the parent project.
 
-set -e
+set -euo pipefail
+IFS=$'\n\t'
 
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -19,12 +20,31 @@ TARGET_DIR="$(dirname "$SCRIPT_DIR")" # Parent directory
 echo -e "Source: ${YELLOW}${SCRIPT_DIR}${NC}"
 echo -e "Target Project: ${YELLOW}${TARGET_DIR}${NC}"
 
+# Optional safety check: does target look like a project?
+if [ ! -d "${TARGET_DIR}/.git" ]; then
+    echo -e "${YELLOW}Warning: Target directory does not contain a .git folder.${NC}"
+    read -p "Continue anyway? (y/N) " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        echo -e "${RED}Aborting.${NC}"
+        exit 1
+    fi
+fi
+
 # Files to copy
 NPMRC_SOURCE="${SCRIPT_DIR}/.npmrc"
 CURSORRULES_SOURCE="${SCRIPT_DIR}/.cursorrules"
 ADVISORY_SOURCE="${SCRIPT_DIR}/Security-Advisory"
 
 REPORT_FILE="${TARGET_DIR}/SECURITY_SETUP_REPORT.md"
+
+# Ensure required sources exist
+for src in "$NPMRC_SOURCE" "$CURSORRULES_SOURCE" "$ADVISORY_SOURCE"; do
+    if [ ! -e "$src" ]; then
+        echo -e "${RED}Error: Required source not found: ${src}${NC}"
+        exit 1
+    fi
+done
 
 # Tracking for report
 INSTALLED_FILES=()
@@ -67,7 +87,7 @@ if [ -d "$DEST_ADVISORY" ]; then
     read -p "Overwrite contents? (y/N) " -n 1 -r
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
-        cp -R "$ADVISORY_SOURCE/"* "$DEST_ADVISORY/"
+        cp -R "$ADVISORY_SOURCE"/. "$DEST_ADVISORY"/
         echo -e "Updated Security-Advisory."
         INSTALLED_FILES+=("Security-Advisory/ (Updated)")
     else
@@ -105,6 +125,11 @@ echo -e "\n${YELLOW}--- Cleanup ---${NC}"
 read -p "Do you want to delete the 'dev-security-config' installer directory? (y/N) " -n 1 -r
 echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then
+    # extra safety before rm -rf
+    if [ -z "$SCRIPT_DIR" ] || [ "$SCRIPT_DIR" = "/" ]; then
+        echo -e "${RED}Refusing to delete unsafe SCRIPT_DIR: '$SCRIPT_DIR'${NC}"
+        exit 1
+    fi
     echo -e "Deleting ${SCRIPT_DIR}..."
     rm -rf "$SCRIPT_DIR"
     echo -e "${GREEN}Cleanup complete.${NC}"
