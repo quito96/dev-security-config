@@ -12,6 +12,12 @@ Recent supply chain attacks (like the "Shai-Hulud" worm in late 2025) utilize `p
 ## 📂 What's inside?
 
 *   **`.npmrc`**: A hardened configuration file that disables scripts (`ignore-scripts=true`) and enforces strict versioning.
+```bash
+audit=true        # enable automatic npm security audits (additional safety layer)
+package-lock=true # ensure the lockfile is consistently used for installs
+fund=false        # disable funding messages (DX only, no security impact)
+```
+
 *   **`.cursorrules`**: Security instructions for AI Coding Assistants (Cursor, Windsurf, Copilot) to prevent them from accidentally suggesting insecure commands.
 *   **`setup.sh`**: A script that injects these configurations into your project.
 
